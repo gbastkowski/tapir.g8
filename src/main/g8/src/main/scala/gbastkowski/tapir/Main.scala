@@ -32,41 +32,26 @@ object Main extends IOApp {
   def run(args: List[String]): IO[ExitCode] = {
     BlazeServerBuilder[IO]
       .bindHttp(port, host)
-      .withHttpApp(Router("/"-> routes).orNotFound)
+      .withHttpApp(Router("/"-> routes(new HelloBackend)).orNotFound)
       .serve
       .compile.drain.as(ExitCode.Success)
   }
 
-  private[this] def routes =
-    HelloEndpoint.get.toRoutes(authenticateAndSayHello) <+>
-    Router(
-      "/docs" -> docs(
-        HelloEndpoint.get))
+  private[this] def routes(backend: HelloBackend) =
+    (HelloEndpoint.get  toRoutes {  authenticate  andThenFirstE   (backend.sayHello _).tupled }) <+>
+    docs(
+      HelloEndpoint.get)
 
   private[this] val authenticate: UsernamePassword => IO[Either[String, UserInfo]] = {
-    case UsernamePassword("a", Some("a")) => IO(Right(UserInfo("a user")))
-    case _                                => IO(Left("Invalid credentials"))
+    case UsernamePassword(username, Some("valid"))  => IO(Right(UserInfo(username, "a user")))
+    case UsernamePassword(username, Some(_))        => IO(Left("invalid password"))
+    case UsernamePassword(username, None)           => IO(Left("please provide a password"))
   }
 
-  private[this] val sayHello: ((UserInfo, String)) => IO[Either[String, Json]] = {
-    case (UserInfo(name), greeting) => IO {
-      Right {
-        Json.obj(
-          "greeting"  ->  Json.fromString(greeting),
-          "name"      ->  Json.fromString(name))
-      }
-    }
-  }
+  private[this] def docs(endpoints: Endpoint[_, _, _, _]*) = {
+    val yaml = endpoints.toOpenAPI("HTTP Gateway", "0.0.1").toYaml
+    val redoc = new RedocHttp4s("HTTP Gateway", yaml)
 
-  private[this] val authenticateAndSayHello: ((UsernamePassword, String)) => IO[Either[String, Json]] = {
-    authenticate.andThenFirstE(sayHello)
+    Router("docs" -> redoc.routes[IO])
   }
-
-  private[this] def docs(endpoints: Endpoint[_, _, _, _]*) =
-    new RedocHttp4s(
-      "HTTP Gateway",
-      endpoints.toOpenAPI("HTTP Gateway", "0.0.1").toYaml)
-    .routes[IO]
 }
-
-case class UserInfo(name: String)

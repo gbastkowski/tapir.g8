@@ -1,4 +1,8 @@
-A [Giter8][g8] template for ...!
+A [Giter8][g8] template for[tapir](https://tapir-scala.readthedocs.io) 
+
+Usage
+-----
+`sbt new gbastkowski/tapir`
 
 Template license
 ----------------
