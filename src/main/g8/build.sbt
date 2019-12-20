@@ -8,7 +8,6 @@ lazy val root = (project in file(".")).
     name                 :=  "tapir sample project",
     Compile / mainClass  :=  Some("gbastkowski.tapir.Main"),
     libraryDependencies ++=  circe                              ++
-                             http4sClient.map(_ % "it")         ++
                              logging                            ++
                              openapi                            ++
-                             scalatest.map( _ % "it, test"))
+                             scalatest.map( _ % "test"))

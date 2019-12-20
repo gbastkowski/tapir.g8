@@ -16,9 +16,6 @@ import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.redoc.http4s.RedocHttp4s
 import sttp.tapir.server.http4s._
 
-import org.apache.logging.log4j.LogManager.getLogger
-
-
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object Main extends IOApp {
@@ -26,8 +23,6 @@ object Main extends IOApp {
 
   private[this] val port = 8081
   private[this] val host = "0.0.0.0"
-
-  private[this] val logger = getLogger(getClass)
 
   def run(args: List[String]): IO[ExitCode] = {
     BlazeServerBuilder[IO]
@@ -52,6 +47,6 @@ object Main extends IOApp {
     val yaml = endpoints.toOpenAPI("HTTP Gateway", "0.0.1").toYaml
     val redoc = new RedocHttp4s("HTTP Gateway", yaml)
 
-    Router("docs" -> redoc.routes[IO])
+    Router("/docs" -> redoc.routes[IO])
   }
 }
