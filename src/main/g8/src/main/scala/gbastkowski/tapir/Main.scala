@@ -38,19 +38,28 @@ object Main extends IOApp {
   }
 
   private[this] def routes =
-    HelloEndpoint.get.toRoutes(sayHello) <+>
+    HelloEndpoint.get.toRoutes(authenticateAndSayHello) <+>
     Router(
       "/docs" -> docs(
         HelloEndpoint.get))
 
-  private[this] val sayHello: ((UsernamePassword, String)) => IO[Either[String, Json]] = {
-    case (userPass, s) => IO {
+  private[this] val authenticate: UsernamePassword => IO[Either[String, UserInfo]] = {
+    case UsernamePassword("a", Some("a")) => IO(Right(UserInfo("a user")))
+    case _                                => IO(Left("Invalid credentials"))
+  }
+
+  private[this] val sayHello: ((UserInfo, String)) => IO[Either[String, Json]] = {
+    case (UserInfo(name), greeting) => IO {
       Right {
         Json.obj(
-          "greeting"  ->  Json.fromString("Hello"),
-          "name"      ->  Json.fromString(s))
+          "greeting"  ->  Json.fromString(greeting),
+          "name"      ->  Json.fromString(name))
       }
     }
+  }
+
+  private[this] val authenticateAndSayHello: ((UsernamePassword, String)) => IO[Either[String, Json]] = {
+    authenticate.andThenFirstE(sayHello)
   }
 
   private[this] def docs(endpoints: Endpoint[_, _, _, _]*) =
@@ -59,3 +68,5 @@ object Main extends IOApp {
       endpoints.toOpenAPI("HTTP Gateway", "0.0.1").toYaml)
     .routes[IO]
 }
+
+case class UserInfo(name: String)
